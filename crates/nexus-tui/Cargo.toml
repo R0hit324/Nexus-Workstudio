@@ -1,0 +1,23 @@
+[package]
+name = "nexus-tui"
+description = "Nexus TUI client: keyboard-first, mouse-aware, low-memory terminal interface."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "nexus-tui"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+nexus-core = { path = "../nexus-core" }
+nexus-client = { path = "../nexus-client" }
+nexus-protocol = { path = "../nexus-protocol" }

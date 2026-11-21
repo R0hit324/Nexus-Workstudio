@@ -1,0 +1,11 @@
+[package]
+name = "nexus-workspace"
+description = "Workspace model and state synchronization. Full implementation in Part 2."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }

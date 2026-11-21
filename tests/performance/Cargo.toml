@@ -1,0 +1,18 @@
+[package]
+name = "nexus-tests-performance"
+description = "Performance smoke tests: bounded-timing checks and a throughput micro-benchmark."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../../crates/nexus-core" }
+nexus-protocol = { path = "../../crates/nexus-protocol" }
+nexus-server = { path = "../../crates/nexus-server" }
+nexus-client = { path = "../../crates/nexus-client" }
+nexus-events = { path = "../../crates/nexus-events" }
+tokio = { workspace = true }
+bytes = { workspace = true }
+tokio-util = { workspace = true }

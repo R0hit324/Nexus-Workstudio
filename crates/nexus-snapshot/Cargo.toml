@@ -1,0 +1,28 @@
+[package]
+name = "nexus-snapshot"
+description = "Part 6 Workspace Snapshots: Atomic snapshot creation, integrity verification, compression, recovery, and retention."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }
+nexus-events = { path = "../nexus-events" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+zstd = "0.13"
+bincode = "1.3"
+sha2 = "0.10"
+parking_lot = "0.12"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+proptest = "1.0"

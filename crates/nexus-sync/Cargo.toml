@@ -1,0 +1,27 @@
+[package]
+name = "nexus-sync"
+description = "Part 5 Real-Time Synchronization Engine: CRDT-based collaborative editing, cursor/presence sync, operation management."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }
+nexus-events = { path = "../nexus-events" }
+nexus-protocol = { path = "../nexus-protocol" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+yrs = { version = "0.24" }
+parking_lot = "0.12"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+proptest = "1.0"

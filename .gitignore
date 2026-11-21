@@ -1,0 +1,16 @@
+# Build artifacts
+/target
+**/*.rs.bk
+*.swp
+*.swo
+
+# Local configuration & data
+nexus.config.toml
+nexus-data/
+config.toml
+
+# Logs and editor noise
+*.log
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,16 @@
+[package]
+name = "nexus-tests-integration"
+description = "End-to-end integration tests: a real server and client exchanging real traffic."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../../crates/nexus-core" }
+nexus-protocol = { path = "../../crates/nexus-protocol" }
+nexus-server = { path = "../../crates/nexus-server" }
+nexus-client = { path = "../../crates/nexus-client" }
+nexus-tui = { path = "../../crates/nexus-tui" }
+tokio = { workspace = true }

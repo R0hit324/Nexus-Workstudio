@@ -1,0 +1,16 @@
+[package]
+name = "nexus-plugin"
+description = "Plugin ecosystem: manifests, lifecycle, permissions, commands, storage."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }
+serde = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+toml = { workspace = true }
+serde_json = { workspace = true }

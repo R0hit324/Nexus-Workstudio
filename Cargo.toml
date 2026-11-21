@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/nexus-core",
+    "crates/nexus-protocol",
+    "crates/nexus-server",
+    "crates/nexus-client",
+    "crates/nexus-tui",
+    "crates/nexus-workspace",
+    "crates/nexus-events",
+    "crates/nexus-sync",
+    "crates/nexus-runtime",
+    "crates/nexus-build",
+    "crates/nexus-terminal",
+    "crates/nexus-snapshot",
+    "crates/nexus-plugin",
+    "crates/nexus-ai",
+    "tests/integration",
+    "tests/protocol",
+    "tests/performance",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "MIT"
+authors = ["Nexus Developers"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bytes = "1"
+clap = { version = "4", features = ["derive"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "net", "macros", "time", "signal", "sync", "io-util", "fs"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures-util = { version = "0.3", features = ["sink"] }
+async-trait = "0.1"
+postcard = { version = "1", features = ["use-std"] }
+anyhow = "1"
+toml = "0.8"
+dirs = "5"
+ratatui = "0.29"
+crossterm = "0.28"

@@ -1,0 +1,21 @@
+[package]
+name = "nexus-protocol"
+description = "Versioned wire protocol: message definitions, serialization, framing, and the transport abstraction."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+postcard = { workspace = true }
+bytes = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+nexus-core = { path = "../nexus-core" }
+uuid = { workspace = true }

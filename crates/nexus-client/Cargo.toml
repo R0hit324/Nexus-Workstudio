@@ -1,0 +1,23 @@
+[package]
+name = "nexus-client"
+description = "Nexus client library: connection lifecycle, handshake, authentication, and Cube operations."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "nexus-client"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+rand = "0.8"
+async-trait = "0.1"
+nexus-core = { path = "../nexus-core" }
+nexus-protocol = { path = "../nexus-protocol" }
+nexus-snapshot = { path = "../nexus-snapshot" }

@@ -1,0 +1,18 @@
+[package]
+name = "nexus-events"
+description = "Part 4 event engine: sequencing, storage, bus, replay, projections, metrics."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../nexus-core" }
+tokio = { workspace = true, features = ["sync"] }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+uuid = { workspace = true, features = ["v4"] }
