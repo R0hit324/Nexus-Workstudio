@@ -129,13 +129,15 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use tokio::sync::mpsc;
 
-    async fn channel_pair(buffer: usize) -> (mpsc::Sender<AiStreamEvent>, mpsc::Receiver<AiStreamEvent>) {
+    async fn channel_pair(
+        buffer: usize,
+    ) -> (mpsc::Sender<AiStreamEvent>, mpsc::Receiver<AiStreamEvent>) {
         mpsc::channel(buffer)
     }
 
     #[tokio::test]
     async fn tapped_stream_forward_events_in_consume_order() {
-        let (tx, mut rx) = channel_pair(8).await;
+        let (tx, rx) = channel_pair(8).await;
         let observed: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
         let seen = observed.clone();
         let tap: StreamTap = Arc::new(move |event: &AiStreamEvent| {
@@ -153,15 +155,21 @@ mod tests {
         });
         let mut stream = AiStream::new(rx, mpsc::channel(1).0).tapped(tap);
         // Send all four events, then drop the sender so recv returns None.
-        tx.send(AiStreamEvent::Started { model: Some(String::from("m")) })
-            .await
-            .ok();
-        tx.send(AiStreamEvent::Content { delta: String::from("one word") })
-            .await
-            .ok();
-        tx.send(AiStreamEvent::Content { delta: String::from(" two words") })
-            .await
-            .ok();
+        tx.send(AiStreamEvent::Started {
+            model: Some(String::from("m")),
+        })
+        .await
+        .ok();
+        tx.send(AiStreamEvent::Content {
+            delta: String::from("one word"),
+        })
+        .await
+        .ok();
+        tx.send(AiStreamEvent::Content {
+            delta: String::from(" two words"),
+        })
+        .await
+        .ok();
         tx.send(AiStreamEvent::Completed {
             usage: crate::error::AiUsage {
                 prompt_tokens: 9,
@@ -209,15 +217,20 @@ mod tests {
         let (cancel_tx, _) = mpsc::channel(1);
         let mut stream = AiStream::new(rx, cancel_tx).tapped(tap);
         while stream.next().await.is_some() {}
-        assert_eq!(*observed.lock().unwrap(), Some(AiErrorKind::ProviderUnavailable));
+        assert_eq!(
+            *observed.lock().unwrap(),
+            Some(AiErrorKind::ProviderUnavailable)
+        );
     }
 
     #[tokio::test]
     async fn untapped_streams_stay_driven_the_same_way() {
         let (tx, rx) = channel_pair(2).await;
-        tx.send(AiStreamEvent::Content { delta: String::from("x") })
-            .await
-            .ok();
+        tx.send(AiStreamEvent::Content {
+            delta: String::from("x"),
+        })
+        .await
+        .ok();
         drop(tx);
         let mut stream = AiStream::new(rx, mpsc::channel(1).0);
         let first = stream.next().await;

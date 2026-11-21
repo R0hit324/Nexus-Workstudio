@@ -233,8 +233,8 @@ impl AiOrchestrator {
                     break;
                 }
                 attempt += 1;
-                let will_retry = try_index < extra_tries
-                    && attempt < self.policy.max_total_attempts;
+                let will_retry =
+                    try_index < extra_tries && attempt < self.policy.max_total_attempts;
                 match provider.complete(request.clone()).await {
                     Ok(response) => {
                         self.usage.prompt_tokens += response.usage.prompt_tokens;
@@ -243,20 +243,14 @@ impl AiOrchestrator {
                             self.fallback_uses += 1;
                         }
                         if let Some(metrics) = &self.metrics {
-                            metrics.completed(
-                                &key,
-                                started.elapsed(),
-                                None,
-                                &response.usage,
-                            );
+                            metrics.completed(&key, started.elapsed(), None, &response.usage);
                         }
                         if let Some(sink) = events {
                             sink.emit(
                                 AiEventKind::AiResponseCompleted,
                                 format!(
                                     "tokens {}+{} via {provider_id}",
-                                    response.usage.prompt_tokens,
-                                    response.usage.completion_tokens
+                                    response.usage.prompt_tokens, response.usage.completion_tokens
                                 ),
                             );
                         }
@@ -320,6 +314,7 @@ mod tests {
     use crate::model::{AiCapabilities, AiModel, ModelId};
     use crate::provider::{AiProvider, AiStream, AiStreamEvent};
     use crate::request::FinishReason;
+    use async_trait::async_trait;
     use std::sync::Arc;
 
     /// Flaky-on-demand provider: fails the first `fail_first` turns with
@@ -342,6 +337,7 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl AiProvider for FlakyProvider {
         fn provider_id(&self) -> &ProviderId {
             &self.id
@@ -355,7 +351,7 @@ mod tests {
             )])
         }
 
-        async fn capabilities(&self, model: &AiModel) -> AiCapabilities {
+        async fn capabilities(&self, _model: &AiModel) -> AiCapabilities {
             AiCapabilities::base_chat()
         }
 

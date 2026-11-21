@@ -14,6 +14,7 @@ pub mod error;
 pub mod event;
 pub mod ids;
 pub mod logging;
+pub mod metrics;
 pub mod permission;
 pub mod runtime;
 pub mod session;
@@ -40,6 +41,7 @@ pub use ids::{
     ArtifactId, BuildId, ConnectionId, CubeId, EventId, FileId, ProjectId, RequestId, RuntimeId,
     SessionId, SnapshotId, TerminalId, UserId, WorkspaceId,
 };
+pub use metrics::{PerformanceMetrics, PerformanceSnapshot};
 pub use permission::Permission;
 pub use runtime::{
     AutoStartPolicy, ExecRequest, ExecResult, HealthCheckConfig, HealthStatus, MountConfig,
