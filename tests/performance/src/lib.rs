@@ -101,6 +101,7 @@ async fn heartbeat_burst_within_budget() {
 /// contended here by using a fixed set of cubes.
 #[test]
 fn event_publish_throughput_matches_part1_baseline() {
+    use nexus_core::bench::{is_regressed, BenchmarkReport};
     use nexus_core::event::EventPayload;
     use nexus_core::ids::UserId;
     use nexus_events::bus::EventBus;
@@ -133,8 +134,20 @@ fn event_publish_throughput_matches_part1_baseline() {
     }
     let elapsed = start.elapsed();
     let per_second = N as f64 / elapsed.as_secs_f64();
+    let current = BenchmarkReport {
+        name: String::from("nexus.event_publish_throughput"),
+        iterations: N as u64,
+        total_duration_ms: elapsed.as_millis() as u64,
+        ops_per_second: per_second,
+    };
+    let baseline = BenchmarkReport {
+        name: String::from("nexus.event_publish_throughput"),
+        iterations: N as u64,
+        total_duration_ms: 200,
+        ops_per_second: 100_000.0,
+    };
     assert!(
-        per_second > 100_000.0,
-        "event publish too slow: {per_second:.0}/s ({elapsed:?} for {N})"
+        !is_regressed(&baseline, &current, 0.0),
+        "event publish regressed: baseline 100k ops/s, current {per_second:.0}/s ({elapsed:?} for {N})"
     );
 }
