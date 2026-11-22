@@ -6,6 +6,7 @@
 //! This crate is intentionally dependency-light and must not depend on
 //! networking, storage, or TUI implementation details.
 
+pub mod bench;
 pub mod build;
 pub mod collaboration;
 pub mod config;
@@ -23,6 +24,7 @@ pub mod timestamp;
 pub mod version;
 pub mod workspace;
 
+pub use bench::{Benchmark, BenchmarkReport};
 pub use build::{
     ArtifactKind, BuildArtifact, BuildConfiguration, BuildPriority, BuildProfile, BuildRequest,
     BuildResult, BuildState, BuildTarget, BuildTargetType, CompilerAdapter, Diagnostic,
