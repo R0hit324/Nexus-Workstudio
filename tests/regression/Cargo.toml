@@ -1,0 +1,14 @@
+[package]
+name = "nexus-tests-regression"
+description = "Permanent regression suite: every serious bug becomes a numbered test."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../../crates/nexus-core" }
+nexus-events = { path = "../../crates/nexus-events" }
+nexus-tests-support = { path = "../support" }
+tokio = { workspace = true }

@@ -19,6 +19,7 @@ members = [
     "tests/protocol",
     "tests/performance",
     "tests/support",
+    "tests/regression",
 ]
 
 [workspace.package]
