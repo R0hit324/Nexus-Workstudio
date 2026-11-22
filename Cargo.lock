@@ -1611,6 +1611,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-tests-support"
+version = "0.1.0"
+dependencies = [
+ "nexus-core",
+]
+
+[[package]]
 name = "nexus-tui"
 version = "0.1.0"
 dependencies = [
