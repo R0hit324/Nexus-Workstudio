@@ -1573,6 +1573,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-tests-fuzz"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "nexus-protocol",
+ "nexus-tests-support",
+ "tokio-util",
+]
+
+[[package]]
 name = "nexus-tests-integration"
 version = "0.1.0"
 dependencies = [

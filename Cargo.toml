@@ -22,6 +22,7 @@ members = [
     "tests/regression",
     "tests/security",
     "tests/property",
+    "tests/fuzz",
 ]
 
 [workspace.package]
