@@ -58,6 +58,22 @@ impl Benchmark {
     }
 }
 
+/// Detects whether a `current` benchmark run regressed against a `baseline`.
+///
+/// Returns `true` when the current throughput fell below the baseline by more
+/// than `max_regression` (a fraction, e.g. `0.1` for a 10% budget).
+#[must_use]
+pub fn is_regressed(
+    baseline: &BenchmarkReport,
+    current: &BenchmarkReport,
+    max_regression: f64,
+) -> bool {
+    if baseline.ops_per_second <= 0.0 || current.ops_per_second <= 0.0 {
+        return false;
+    }
+    current.ops_per_second < baseline.ops_per_second * (1.0 - max_regression)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +103,39 @@ mod tests {
         let report = benchmark.run(|| 0, 0);
         assert_eq!(report.iterations, 0);
         assert_eq!(report.ops_per_second, 0.0);
+    }
+
+    #[test]
+    fn regression_detected_when_throughput_drops() {
+        let baseline = BenchmarkReport {
+            name: String::from("nexus.event_publish"),
+            iterations: 10_000,
+            total_duration_ms: 100,
+            ops_per_second: 100_000.0,
+        };
+        let current = BenchmarkReport {
+            name: String::from("nexus.event_publish"),
+            iterations: 10_000,
+            total_duration_ms: 200,
+            ops_per_second: 50_000.0,
+        };
+        assert!(is_regressed(&baseline, &current, 0.0));
+    }
+
+    #[test]
+    fn no_regression_within_budget() {
+        let baseline = BenchmarkReport {
+            name: String::from("nexus.event_publish"),
+            iterations: 10_000,
+            total_duration_ms: 100,
+            ops_per_second: 100_000.0,
+        };
+        let current = BenchmarkReport {
+            name: String::from("nexus.event_publish"),
+            iterations: 10_000,
+            total_duration_ms: 101,
+            ops_per_second: 99_000.0,
+        };
+        assert!(!is_regressed(&baseline, &current, 0.05));
     }
 }

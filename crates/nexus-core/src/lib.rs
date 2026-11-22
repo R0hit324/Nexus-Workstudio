@@ -24,7 +24,7 @@ pub mod timestamp;
 pub mod version;
 pub mod workspace;
 
-pub use bench::{Benchmark, BenchmarkReport};
+pub use bench::{is_regressed, Benchmark, BenchmarkReport};
 pub use build::{
     ArtifactKind, BuildArtifact, BuildConfiguration, BuildPriority, BuildProfile, BuildRequest,
     BuildResult, BuildState, BuildTarget, BuildTargetType, CompilerAdapter, Diagnostic,
