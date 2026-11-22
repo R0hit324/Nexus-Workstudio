@@ -1615,6 +1615,7 @@ name = "nexus-tests-support"
 version = "0.1.0"
 dependencies = [
  "nexus-core",
+ "nexus-events",
 ]
 
 [[package]]

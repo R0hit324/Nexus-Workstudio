@@ -9,3 +9,4 @@ authors.workspace = true
 
 [dependencies]
 nexus-core = { path = "../../crates/nexus-core" }
+nexus-events = { path = "../../crates/nexus-events" }
