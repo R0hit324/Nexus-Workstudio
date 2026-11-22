@@ -1599,6 +1599,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-tests-property"
+version = "0.1.0"
+dependencies = [
+ "nexus-core",
+ "nexus-sync",
+ "tokio",
+]
+
+[[package]]
 name = "nexus-tests-protocol"
 version = "0.1.0"
 dependencies = [

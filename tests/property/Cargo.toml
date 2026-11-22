@@ -1,0 +1,13 @@
+[package]
+name = "nexus-tests-property"
+description = "Property-based and convergence tests for the synchronization engine."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nexus-core = { path = "../../crates/nexus-core" }
+nexus-sync = { path = "../../crates/nexus-sync" }
+tokio = { workspace = true }

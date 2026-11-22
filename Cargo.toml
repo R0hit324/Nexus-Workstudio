@@ -21,6 +21,7 @@ members = [
     "tests/support",
     "tests/regression",
     "tests/security",
+    "tests/property",
 ]
 
 [workspace.package]
