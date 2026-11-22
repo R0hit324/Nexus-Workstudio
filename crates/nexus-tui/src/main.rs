@@ -57,8 +57,10 @@ fn run_loop(app: &mut App) -> io::Result<()> {
     loop {
         if event::poll(Duration::from_millis(33))? {
             let raw = event::read()?;
+            let input_started = std::time::Instant::now();
             if let Some(ui) = InputTranslator::translate(raw) {
                 app.handle_event(ui);
+                perf.record_latency_ms(input_started.elapsed().as_millis() as u64);
             }
         } else if last_tick.elapsed() >= Duration::from_millis(33) {
             app.handle_event(UiEvent::Tick);
