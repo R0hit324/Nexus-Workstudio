@@ -15,6 +15,7 @@ use crossterm::terminal::{
 };
 use crossterm::ExecutableCommand;
 use nexus_client::SessionService;
+use nexus_core::PerformanceMetrics;
 use nexus_tui::app::render_frame;
 use nexus_tui::app::App;
 use nexus_tui::input::{InputTranslator, UiEvent};
@@ -49,6 +50,8 @@ fn run_loop(app: &mut App) -> io::Result<()> {
     let mut terminal = ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(stdout()))?;
     terminal.hide_cursor()?;
 
+    let perf = std::sync::Arc::new(PerformanceMetrics::new());
+
     // Redraw every ~33ms even when idle so blink/scrollback stay live.
     let mut last_tick = std::time::Instant::now();
     loop {
@@ -74,6 +77,7 @@ fn run_loop(app: &mut App) -> io::Result<()> {
         }
 
         terminal.draw(|frame| render_frame(app, frame))?;
+        perf.record_latency_ms(std::time::Instant::now().elapsed().as_millis() as u64);
     }
 
     let _ = terminal.show_cursor();
