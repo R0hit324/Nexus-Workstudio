@@ -1621,6 +1621,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-tests-security"
+version = "0.1.0"
+dependencies = [
+ "nexus-client",
+ "nexus-core",
+ "nexus-protocol",
+ "nexus-server",
+ "nexus-tests-support",
+ "tokio",
+]
+
+[[package]]
 name = "nexus-tests-support"
 version = "0.1.0"
 dependencies = [
