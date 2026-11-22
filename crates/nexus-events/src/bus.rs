@@ -281,7 +281,10 @@ impl EventBus {
         let persisted = event.delivery().is_persistent();
         if persisted {
             let started = event.timestamp().as_millis();
-            self.inner.store.append(&event)?;
+            if let Err(err) = self.inner.store.append(&event) {
+                self.inner.metrics.record_failed();
+                return Err(err);
+            }
             self.inner.metrics.record_persist_delay_ms(
                 nexus_core::timestamp::Timestamp::now()
                     .as_millis()
@@ -565,6 +568,41 @@ mod tests {
         let cube = CubeId::new();
         assert!(bus.publish(durable(cube)).is_err());
         assert!(!bus.publish(transient(cube)).unwrap().persisted);
+    }
+
+    #[tokio::test]
+    async fn publish_failure_is_recorded_in_metrics() {
+        #[derive(Debug)]
+        struct FailingStore;
+        impl EventStore for FailingStore {
+            fn append(&self, _e: &Event) -> Result<()> {
+                Err(Error::Serialization("injected store failure".into()))
+            }
+            fn get(&self, _c: CubeId, _s: EventSequence) -> Result<Option<Event>> {
+                Ok(None)
+            }
+            fn replay(&self, _c: CubeId, _f: EventSequence) -> Result<Vec<Event>> {
+                Ok(vec![])
+            }
+            fn latest_sequence(&self, _c: CubeId) -> EventSequence {
+                EventSequence::UNASSIGNED
+            }
+            fn remove_cube(&self, _c: CubeId) {}
+        }
+        let bus = EventBus::new(
+            Arc::new(FailingStore),
+            None,
+            Arc::new(EventMetrics::new()),
+            Arc::new(nexus_core::PerformanceMetrics::new()),
+        );
+        let cube = CubeId::new();
+        assert!(bus.publish(durable(cube)).is_err());
+        let snap = bus.metrics().snapshot();
+        assert_eq!(snap.failed, 1, "failure must be accounted: {snap}");
+        assert_eq!(snap.persisted, 0);
+        // Transient events bypass the store and still publish.
+        assert!(!bus.publish(transient(cube)).unwrap().persisted);
+        assert_eq!(bus.metrics().snapshot().failed, 1);
     }
 
     #[tokio::test]
