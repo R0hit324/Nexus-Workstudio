@@ -45,6 +45,7 @@ fn parallel_cubes_stay_independent_and_contiguous() {
         Arc::new(nexus_events::store::MemoryEventStore::new()),
         None,
         Arc::new(EventMetrics::new()),
+        Arc::new(nexus_core::PerformanceMetrics::new()),
     ));
     let cubes: Vec<CubeId> = (0..CUBES).map(|_| CubeId::new()).collect();
 
@@ -84,6 +85,7 @@ fn single_cube_parallel_publishers_are_serialized() {
         Arc::new(nexus_events::store::MemoryEventStore::new()),
         None,
         Arc::new(EventMetrics::new()),
+        Arc::new(nexus_core::PerformanceMetrics::new()),
     ));
     let cube = CubeId::new();
 

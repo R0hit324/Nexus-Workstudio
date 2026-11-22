@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use nexus_core::event::{Event, EventSequence};
 use nexus_core::ids::CubeId;
+use nexus_core::PerformanceMetrics;
 use tokio::sync::mpsc;
 
 use crate::batch::EventBatch;
@@ -94,6 +96,7 @@ struct Inner {
     cubes: Mutex<HashMap<CubeId, CubeState>>,
     subscribers: Mutex<Vec<SubscriberEntry>>,
     metrics: Arc<EventMetrics>,
+    perf: Arc<PerformanceMetrics>,
     consumers: Mutex<Option<ConsumerRunner>>,
     next_id: AtomicU64,
 }
@@ -171,6 +174,7 @@ impl Default for EventBus {
             Arc::new(MemoryEventStore::new()),
             None,
             Arc::new(EventMetrics::new()),
+            Arc::new(nexus_core::PerformanceMetrics::new()),
         )
     }
 }
@@ -181,6 +185,7 @@ impl EventBus {
         store: Arc<dyn EventStore>,
         consumers: Option<ConsumerRunner>,
         metrics: Arc<EventMetrics>,
+        perf: Arc<PerformanceMetrics>,
     ) -> Self {
         Self {
             inner: Arc::new(Inner {
@@ -188,6 +193,7 @@ impl EventBus {
                 cubes: Mutex::new(HashMap::new()),
                 subscribers: Mutex::new(Vec::new()),
                 metrics,
+                perf,
                 consumers: Mutex::new(consumers),
                 next_id: AtomicU64::new(1),
             }),
@@ -271,6 +277,7 @@ impl EventBus {
         event: Event,
         _gate: &std::sync::MutexGuard<'a, ()>,
     ) -> Result<PublishReceipt> {
+        let perf_started = Instant::now();
         let persisted = event.delivery().is_persistent();
         if persisted {
             let started = event.timestamp().as_millis();
@@ -287,6 +294,10 @@ impl EventBus {
             let _ = runner.apply(&event);
         }
         trace_event(&event, None);
+        self.inner
+            .perf
+            .record_latency_ms(perf_started.elapsed().as_millis() as u64);
+        self.inner.perf.record_operation();
         self.inner.metrics.record_published();
         Ok(PublishReceipt {
             event,
@@ -498,13 +509,23 @@ mod tests {
         let cube = CubeId::new();
         {
             let store: Arc<dyn EventStore> = Arc::new(SegmentedEventStore::open(&dir).unwrap());
-            let bus = EventBus::new(store, None, Arc::new(EventMetrics::new()));
+            let bus = EventBus::new(
+                store,
+                None,
+                Arc::new(EventMetrics::new()),
+                Arc::new(nexus_core::PerformanceMetrics::new()),
+            );
             bus.publish(durable(cube)).unwrap();
             bus.publish(durable(cube)).unwrap();
         }
         {
             let store: Arc<dyn EventStore> = Arc::new(SegmentedEventStore::open(&dir).unwrap());
-            let bus = EventBus::new(store, None, Arc::new(EventMetrics::new()));
+            let bus = EventBus::new(
+                store,
+                None,
+                Arc::new(EventMetrics::new()),
+                Arc::new(nexus_core::PerformanceMetrics::new()),
+            );
             // Continues sequencing past the latest persisted value.
             let receipt = bus.publish(durable(cube)).unwrap();
             assert_eq!(receipt.event.sequence().value(), 3);
@@ -535,7 +556,12 @@ mod tests {
             }
             fn remove_cube(&self, _c: CubeId) {}
         }
-        let bus = EventBus::new(Arc::new(TrapStore), None, Arc::new(EventMetrics::new()));
+        let bus = EventBus::new(
+            Arc::new(TrapStore),
+            None,
+            Arc::new(EventMetrics::new()),
+            Arc::new(nexus_core::PerformanceMetrics::new()),
+        );
         let cube = CubeId::new();
         assert!(bus.publish(durable(cube)).is_err());
         assert!(!bus.publish(transient(cube)).unwrap().persisted);

@@ -140,6 +140,7 @@ impl Server {
             store,
             None,
             Arc::new(EventMetrics::new()),
+            Arc::new(nexus_core::PerformanceMetrics::new()),
         )))
     }
 

@@ -114,6 +114,7 @@ fn event_publish_throughput_matches_part1_baseline() {
         Arc::new(MemoryEventStore::new()),
         None,
         Arc::new(EventMetrics::new()),
+        Arc::new(nexus_core::PerformanceMetrics::new()),
     );
     let cubes: Vec<_> = (0..CUBES).map(|_| nexus_core::ids::CubeId::new()).collect();
 
