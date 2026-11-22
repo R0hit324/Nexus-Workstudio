@@ -1,13 +1,14 @@
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use nexus_core::config::ServerConfig;
 use nexus_core::cube::CubeManager;
 use nexus_core::ids::{ConnectionId, SessionId, UserId};
 use nexus_core::session::SessionDescriptor;
 use nexus_core::timestamp::Timestamp;
+use nexus_core::PerformanceMetrics;
 use nexus_protocol::{ErrorCode as ProtoError, Message, TcpTransport, Transport};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -193,6 +194,7 @@ impl Server {
         }
         info!(summary = %plugin_host.summary(), "plugins_loaded");
         let dispatcher = Arc::new(dispatcher.with_plugins(Arc::clone(&plugin_host)));
+        let perf = Arc::new(PerformanceMetrics::new());
 
         let inner = Arc::new(ServerInner {
             config: self.config,
@@ -204,6 +206,7 @@ impl Server {
             dispatcher,
             authenticator,
             metrics,
+            perf,
             plugins: Arc::clone(&plugin_host),
         });
 
@@ -241,6 +244,7 @@ struct ServerInner {
     dispatcher: Arc<Dispatcher>,
     authenticator: Arc<dyn Authenticator>,
     metrics: Arc<Metrics>,
+    perf: Arc<PerformanceMetrics>,
     plugins: Arc<PluginHost>,
 }
 
@@ -465,10 +469,11 @@ impl ServerInner {
                     Ok(Some(message)) => {
                         self.metrics.message_in();
                         self.session_manager.note_received(session_id);
-                        let action = self
-                            .dispatcher
-                            .handle(message, ctx)
-                            .await;
+                        let perf_started = Instant::now();
+                        let action = self.dispatcher.handle(message, ctx).await;
+                        self.perf
+                            .record_latency_ms(perf_started.elapsed().as_millis() as u64);
+                        self.perf.record_operation();
                         if let Some(reply) = action.reply() {
                             if let Err(err) = timeout(
                                 write_timeout,
