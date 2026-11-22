@@ -16,7 +16,7 @@ and every new capability lands with tests that prove it.
 | Chaos | Failure injection and recovery behavior (crashes, drops, restarts) | planned | Pending |
 | Security | Authentication/authorization boundaries, protocol abuse resistance | planned | Pending |
 | Stress | High load, many users, many cubes, slow clients | planned | Pending |
-| Release | Pre-release checklist (versioning, docs, migration, sign-off) | planned | Pending |
+| Release | Pre-release checklist (versioning, docs, migration, sign-off) | `docs/architecture/release.md` | Active |
 
 ## Quality gates
 
