@@ -10,6 +10,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use nexus_core::bench::{is_regressed, BenchmarkReport};
 use nexus_core::config::ServerConfig;
 use nexus_core::timestamp::Timestamp;
 use nexus_protocol::{FrameCodec, Message};
@@ -50,7 +51,22 @@ fn frame_encoding_throughput_is_reasonable() {
     }
     let elapsed = start.elapsed();
     let per_second = N as f64 / elapsed.as_secs_f64();
-    assert!(per_second > 100_000.0, "encode too slow: {per_second:.0}/s");
+    let current = BenchmarkReport {
+        name: String::from("nexus.frame_encode_throughput"),
+        iterations: N as u64,
+        total_duration_ms: elapsed.as_millis() as u64,
+        ops_per_second: per_second,
+    };
+    let baseline = BenchmarkReport {
+        name: String::from("nexus.frame_encode_throughput"),
+        iterations: N as u64,
+        total_duration_ms: 200,
+        ops_per_second: 100_000.0,
+    };
+    assert!(
+        !is_regressed(&baseline, &current, 0.0),
+        "frame encoding regressed: baseline 100k ops/s, current {per_second:.0}/s"
+    );
 }
 
 /// A full server round trip (connect, authenticate, create, close) must fit in
