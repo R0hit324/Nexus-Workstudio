@@ -34,12 +34,12 @@ Nexus roadmap (spec sections 97-99, 98 critical deployment rules).
 | Backup verification exists | Delivered | Validator/checksum + backup docs |
 | Disaster recovery procedure exists | Delivered | `docs/deployment/runbook.md`, `docs/deployment/backup.md` |
 | Runtime deployment documented | Delivered | `docs/deployment/deployment.md` |
-| Runtime images versioned | Pending | Release pipeline docs |
-| Dependency caching works | Pending | `docs/deployment/release.md` |
+| Runtime images versioned | Delivered | Container image policy added to `docs/deployment/release.md` |
+| Dependency caching works | Delivered | CI uses `Swatinem/rust-cache` (`docs/ci/ci.yml`) |
 | Update strategy exists | Documented | `docs/deployment/deployment.md`, migrations |
 | Release pipeline exists | Delivered | `docs/deployment/release.md`, `docs/ci/ci.yml` |
 | Release artifacts verifiable | Delivered | Policy doc + integrity requirements |
-| Reproducible builds investigated | Pending | `docs/deployment/release.md` |
+| Reproducible builds investigated | Documented | Findings recorded in `docs/deployment/release.md` |
 | Documentation complete | In progress | Closing docs delivered this slice |
 | Quick-start guide exists | Delivered | `docs/deployment/first-run.md` |
 | Troubleshooting guide exists | Delivered | `docs/deployment/operations.md` |

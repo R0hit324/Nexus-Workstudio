@@ -19,6 +19,30 @@ Source
   -> Stage release candidate
 ```
 
+## Container image versioning
+
+Release images are published to a registry under the release tag:
+
+```text
+ghcr.io/<owner>/nexus-server:<MAJOR>.<MINOR>.<PATCH>
+ghcr.io/<owner>/nexus-server:latest
+```
+
+Image tags follow semantic versioning and are cut only from tagged releases.
+The image contents are built from the release commit with `--locked` to pin the
+dependency graph.
+
+## Dependency caching
+
+The CI pipeline (`docs/ci/ci.yml`) uses `Swatinem/rust-cache` for dependency
+caching; the performance job runs the regression suite in release mode.
+
+## Reproducible builds
+
+- Investigated where practical: builds are executed with a locked dependency
+  graph and release notes; binary reproducibility across rebuilds is tracked as
+  an ongoing engineering item.
+
 ## Release checklist
 
 Before any release candidate is promoted:
