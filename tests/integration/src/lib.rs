@@ -268,3 +268,44 @@ fn headless_session_connects_joins_opens_and_edits() {
     app.tick();
     assert!(app.users.members().iter().any(|m| m.name == "bob"));
 }
+
+/// Network fault: an abruptly dropped client (no graceful close) must not
+/// corrupt server state; the server cleans the session up and keeps serving.
+#[tokio::test]
+async fn abrupt_client_disconnect_is_cleaned_up_without_corrupting_server() {
+    let running = Server::new(server_config()).start().await.unwrap();
+    let state = running.state().clone();
+    let addr = running.local_addr;
+    let config = client_config(addr, "frank");
+
+    let client = nexus_client::Client::connect(&config).await.unwrap();
+    client.authenticate("frank").await.unwrap();
+    let _cube = client.create_cube("doomed").await.unwrap();
+
+    // Abruptly drop the client without a graceful close.
+    drop(client);
+
+    // The server must observe the session drop and stay healthy.
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+    loop {
+        if state
+            .active_sessions
+            .load(std::sync::atomic::Ordering::Relaxed)
+            == 0
+        {
+            break;
+        }
+        if tokio::time::Instant::now() > deadline {
+            panic!("server never dropped the session after abrupt disconnect");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+
+    // A fresh client must be able to authenticate and operate normally.
+    let fresh = nexus_client::Client::connect(&config).await.unwrap();
+    let session = fresh.authenticate("frank").await.unwrap();
+    assert_eq!(session.username, "frank");
+    let recreated = fresh.create_cube("after-abuse").await.unwrap();
+    assert_eq!(recreated.name, "after-abuse");
+    fresh.close().await.unwrap();
+}
