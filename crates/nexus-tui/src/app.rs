@@ -978,7 +978,7 @@ pub(crate) mod render {
     use ratatui::text::{Line, Span};
     use ratatui::widgets::{Block, Borders, Paragraph};
 
-    use super::{to_terminal_style, App, StyleKey};
+    use super::{to_terminal_style, App, ConnectionState, StyleKey};
     use crate::editor::syntax::{self, HighlightKind, SyntaxProvider};
     use crate::layout::{LayoutMap, Rect};
 
@@ -997,6 +997,8 @@ pub(crate) mod render {
 
     /// Draws every visible panel plus overlays.
     pub(crate) fn draw(app: &mut App, frame: &mut ratatui::Frame, map: &LayoutMap) {
+        render_header(app, frame, &map.header);
+
         if let Some(rect) = map.explorer {
             let lines: Vec<String> = app
                 .explorer
@@ -1016,12 +1018,15 @@ pub(crate) mod render {
         render_editor(app, frame, &map.editor);
 
         if let Some(rect) = map.users {
-            let names: Vec<String> = app
+            let mut names: Vec<String> = app
                 .users
                 .members()
                 .iter()
                 .map(|m| format!("• {}", m.name))
                 .collect();
+            if names.is_empty() {
+                names.push("No members yet.".to_string());
+            }
             frame.render_widget(
                 Paragraph::new(names.join("\n")).block(panel_block(app, "Users")),
                 border_rect(&rect),
@@ -1115,6 +1120,30 @@ pub(crate) mod render {
         frame.render_widget(Paragraph::new(text).block(block), border_rect(rect));
     }
 
+    fn render_header(app: &App, frame: &mut ratatui::Frame, rect: &Rect) {
+        use ratatui::style::Modifier;
+
+        let brand_style = {
+            let mut style = to_terminal_style(app.theme.style(StyleKey::PanelTitle));
+            style = style.add_modifier(Modifier::BOLD);
+            style
+        };
+        let body_style = to_terminal_style(app.theme.style(StyleKey::Foreground));
+        let connection = match app.session.state.connection {
+            ConnectionState::Connected => "CONNECTED".to_string(),
+            ConnectionState::Connecting => "CONNECTING".to_string(),
+            ConnectionState::Disconnected => "OFFLINE".to_string(),
+        };
+        let line = Line::from(vec![
+            Span::styled("Nexus".to_string(), brand_style),
+            Span::styled(
+                format!("  ·  {}  ·  {}", app.session.state.user_label(), connection),
+                body_style,
+            ),
+        ]);
+        frame.render_widget(Paragraph::new(vec![line]), border_rect(rect));
+    }
+
     fn render_editor(app: &mut App, frame: &mut ratatui::Frame, rect: &Rect) {
         let title = app
             .session
@@ -1122,14 +1151,127 @@ pub(crate) mod render {
             .active_cube
             .as_ref()
             .map(|c| c.name.clone())
-            .unwrap_or_else(|| "editor".into());
+            .unwrap_or_else(|| "Editor".into());
         let block = panel_block(app, title);
         let area = border_rect(rect);
         let inner = block.inner(area);
         frame.render_widget(block, area);
 
         let text_area = TRect::new(inner.x, inner.y, inner.width, inner.height);
-        render_editor_lines(app, frame, text_area);
+        if app.editor.active_doc().is_none() {
+            render_welcome(app, frame, text_area);
+        } else {
+            render_editor_lines(app, frame, text_area);
+        }
+    }
+
+    /// Renders the first-launch welcome content when no document is open.
+    fn render_welcome(app: &App, frame: &mut ratatui::Frame, area: TRect) {
+        let lines = welcome_lines(app);
+        frame.render_widget(Paragraph::new(lines), area);
+    }
+
+    /// Builds the welcome content shown before any file is open: branding,
+    /// connection status, Cube status, next steps, and shortcuts. Derived
+    /// purely from current state; no fake actions are introduced.
+    fn welcome_lines(app: &App) -> Vec<Line<'static>> {
+        use ratatui::style::Modifier;
+
+        let mut brand_style = to_terminal_style(app.theme.style(StyleKey::PanelTitle));
+        brand_style = brand_style.add_modifier(Modifier::BOLD);
+        let body_style = to_terminal_style(app.theme.style(StyleKey::Foreground));
+        let heading_style = brand_style;
+
+        let mut lines: Vec<Line<'static>> = Vec::new();
+        lines.push(Line::from(Span::styled("Nexus".to_string(), brand_style)));
+        lines.push(Line::from(Span::styled(
+            "Nexus workspace".to_string(),
+            body_style,
+        )));
+
+        let (status_text, status_style) = match app.session.state.connection {
+            ConnectionState::Connected => (
+                format!(
+                    "Connected — signed in as {}",
+                    app.session.state.user_label()
+                ),
+                to_terminal_style(app.theme.style(StyleKey::NotificationSuccess)),
+            ),
+            ConnectionState::Connecting => (
+                "Connecting — waiting for server…".to_string(),
+                to_terminal_style(app.theme.style(StyleKey::NotificationWarning)),
+            ),
+            ConnectionState::Disconnected => (
+                "Offline — not connected".to_string(),
+                to_terminal_style(app.theme.style(StyleKey::NotificationError)),
+            ),
+        };
+        lines.push(Line::from(Span::styled(
+            format!("Status: {status_text}"),
+            status_style,
+        )));
+
+        let cube_name = app
+            .session
+            .state
+            .active_cube
+            .as_ref()
+            .map(|c| c.name.clone())
+            .unwrap_or_else(|| "none".to_string());
+        lines.push(Line::from(Span::styled(
+            format!("Cube: {cube_name}"),
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        if app.session.state.active_cube.is_none() {
+            lines.push(Line::from(Span::styled(
+                "You are not inside a Cube yet.".to_string(),
+                to_terminal_style(app.theme.style(StyleKey::Warning)),
+            )));
+            lines.push(Line::from(Span::styled(
+                "Next step: open the command palette with Ctrl-P and run the join-cube command."
+                    .to_string(),
+                body_style,
+            )));
+        } else {
+            lines.push(Line::from(Span::styled(
+                "No file is open in this Cube.".to_string(),
+                body_style,
+            )));
+        }
+
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+        lines.push(Line::from(Span::styled(
+            "Shortcuts".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-P  Command palette    Ctrl-S  Save file",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-B  Build project        Ctrl-O  Open file",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-W  Close tab            Ctrl-Q  Quit",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-R  Reconnect              /  Search",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  e  Toggle Explorer   t  Toggle Terminal   u  Toggle Users   c  Toggle Chat",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  h j k l / arrows  Move cursor     Tab  Focus next panel",
+            body_style,
+        )));
+
+        lines
     }
 
     fn render_editor_lines(app: &mut App, frame: &mut ratatui::Frame, area: TRect) {
@@ -1290,6 +1432,58 @@ pub(crate) mod render {
                 lines.len() as u16,
             );
             frame.render_widget(Paragraph::new(lines), rect);
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use nexus_client::app::state::CubeInfo;
+        use nexus_client::SessionService;
+        use nexus_core::ids::CubeId;
+
+        fn welcome_text(app: &App) -> String {
+            welcome_lines(app)
+                .iter()
+                .map(|l| {
+                    l.spans
+                        .iter()
+                        .map(|s| (*s.content).to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        #[test]
+        fn welcome_lists_branding_status_and_shortcuts() {
+            let app = App::new(SessionService::new("ws://localhost:9000"));
+            let text = welcome_text(&app);
+            assert!(text.contains("Nexus"));
+            assert!(text.contains("Status:"));
+            assert!(text.contains("Shortcuts"));
+            assert!(text.contains("Ctrl-P"));
+            assert!(text.contains("Ctrl-Q"));
+        }
+
+        #[test]
+        fn welcome_offers_next_step_when_no_cube_is_joined() {
+            let app = App::new(SessionService::new("ws://localhost:9000"));
+            let text = welcome_text(&app);
+            assert!(text.contains("not inside a Cube yet"));
+        }
+
+        #[test]
+        fn welcome_reflects_joined_cube_state() {
+            let mut app = App::new(SessionService::new("ws://localhost:9000"));
+            app.session.state.active_cube = Some(CubeInfo {
+                id: CubeId::new(),
+                name: "backend-api".to_string(),
+            });
+            let text = welcome_text(&app);
+            assert!(text.contains("backend-api"));
+            assert!(!text.contains("not inside a Cube yet"));
         }
     }
 }
