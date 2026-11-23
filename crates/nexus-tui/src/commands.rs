@@ -58,6 +58,7 @@ pub enum Command {
     RefreshExplorer,
     JoinCube,
     LeaveCube,
+    CreateCube,
     ListPlugins,
 }
 
@@ -122,6 +123,7 @@ const ALL: &[C] = &[
     C::RefreshExplorer,
     C::JoinCube,
     C::LeaveCube,
+    C::CreateCube,
     C::ListPlugins,
 ];
 
@@ -179,6 +181,7 @@ impl Command {
             Self::RefreshExplorer => "refresh-explorer",
             Self::JoinCube => "join-cube",
             Self::LeaveCube => "leave-cube",
+            Self::CreateCube => "create-cube",
             Self::ListPlugins => "plugin-status",
         }
     }
@@ -265,6 +268,7 @@ impl CommandRegistry {
                 RefreshExplorer => CommandSpec::new("Refresh", "Refresh the file explorer"),
                 JoinCube => CommandSpec::new("Join Cube", "Join the selected Cube"),
                 LeaveCube => CommandSpec::new("Leave Cube", "Leave the current Cube"),
+                CreateCube => CommandSpec::new("Create Cube", "Create a new Cube"),
                 ListPlugins => CommandSpec::new("Plugin Status", "List server plugins and states"),
             };
             specs.insert(*command, spec);

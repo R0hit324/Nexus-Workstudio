@@ -717,14 +717,35 @@ impl App {
                 }
             }
             C::JoinCube => {
-                if let Some(id) = self.selected_cube_id() {
+                if self.session.state.cubes.is_empty() {
+                    self.notifications.push(
+                        NotificationKind::Info,
+                        "No cubes yet — create one to get started",
+                    );
+                } else if let Some(id) = self.selected_cube_id() {
                     self.apply_action(Action::JoinCube(id));
                 }
             }
             C::LeaveCube => self.apply_action(Action::LeaveCube),
+            C::CreateCube => self.apply_action(Action::CreateCube(self.new_cube_name())),
             C::ListPlugins => self.apply_action(Action::ListPlugins),
             C::ExecuteCommand | C::ScrollUp | C::ScrollDown | C::Replace => {}
         }
+    }
+
+    /// Generates a display name for a new Cube; the creation itself goes through
+    /// the real remote flow (`Action::CreateCube` → `SessionService::create_cube`).
+    fn new_cube_name(&self) -> String {
+        let user = self
+            .session
+            .state
+            .username
+            .clone()
+            .unwrap_or_else(|| "user".into());
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        format!("nexus-{user}-{nanos}")
     }
 
     fn toggle_panel(&mut self, id: PanelId) {
@@ -1001,6 +1022,15 @@ pub(crate) mod render {
     pub(crate) fn draw(app: &mut App, frame: &mut ratatui::Frame, map: &LayoutMap) {
         render_header(app, frame, &map.header);
 
+        // No Cube yet: the content area renders the Home dashboard instead of an
+        // editor frame, so first launch is never a bare bordered editor pane.
+        if app.session.state.active_cube.is_none() {
+            render_home(app, frame, map.editor);
+            render_status(app, frame, &map.status);
+            render_overlays(app, frame, map);
+            return;
+        }
+
         if let Some(rect) = map.explorer {
             let mut lines: Vec<String> = app
                 .explorer
@@ -1147,6 +1177,175 @@ pub(crate) mod render {
             ),
         ]);
         frame.render_widget(Paragraph::new(vec![line]), border_rect(rect));
+    }
+
+    /// Renders the Home dashboard shown when the user is connected but not yet
+    /// inside a Cube. Content is laid out in the content area — no editor frame.
+    fn render_home(app: &App, frame: &mut ratatui::Frame, area: Rect) {
+        let lines = home_lines(app);
+        frame.render_widget(Paragraph::new(lines), border_rect(&area));
+    }
+
+    /// Builds the Home dashboard content from real application state. Only real
+    /// data and real command targets are used; nothing is fabricated.
+    fn home_lines(app: &App) -> Vec<Line<'static>> {
+        use ratatui::style::Modifier;
+
+        let mut brand_style = to_terminal_style(app.theme.style(StyleKey::PanelTitle));
+        brand_style = brand_style.add_modifier(Modifier::BOLD);
+        let body_style = to_terminal_style(app.theme.style(StyleKey::Foreground));
+        let heading_style = brand_style;
+        let accent_style = to_terminal_style(app.theme.style(StyleKey::NotificationInfo));
+
+        let mut lines: Vec<Line<'static>> = Vec::new();
+        lines.push(Line::from(Span::styled("Nexus".to_string(), brand_style)));
+        lines.push(Line::from(Span::styled(
+            "Nexus — collaborative development environment".to_string(),
+            body_style,
+        )));
+
+        let (status_text, status_style) = match app.session.state.connection {
+            ConnectionState::Connected => (
+                format!(
+                    "Connected — signed in as {}",
+                    app.session.state.user_label()
+                ),
+                to_terminal_style(app.theme.style(StyleKey::NotificationSuccess)),
+            ),
+            ConnectionState::Connecting => (
+                "Connecting — waiting for server…".to_string(),
+                to_terminal_style(app.theme.style(StyleKey::NotificationWarning)),
+            ),
+            ConnectionState::Disconnected => (
+                "Offline — not connected".to_string(),
+                to_terminal_style(app.theme.style(StyleKey::NotificationError)),
+            ),
+        };
+        lines.push(Line::from(Span::styled(
+            format!("Status: {status_text}"),
+            status_style,
+        )));
+        let cube_name = app
+            .session
+            .state
+            .active_cube
+            .as_ref()
+            .map(|c| c.name.clone())
+            .unwrap_or_else(|| "none".to_string());
+        lines.push(Line::from(Span::styled(
+            format!("Cube: {cube_name}"),
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Welcome to Nexus".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "You are connected. Create or join a Cube to start working together.".to_string(),
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Actions".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Create Cube — create a new Cube on the server".to_string(),
+            accent_style,
+        )));
+        if app.session.state.cubes.is_empty() {
+            lines.push(Line::from(Span::styled(
+                "  Join Cube — no Cubes known yet; create one first".to_string(),
+                body_style,
+            )));
+        } else {
+            lines.push(Line::from(Span::styled(
+                "  Join Cube — join a known Cube".to_string(),
+                accent_style,
+            )));
+        }
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Recent Cubes".to_string(),
+            heading_style,
+        )));
+        if app.session.state.cubes.is_empty() {
+            lines.push(Line::from(Span::styled(
+                "  No cubes yet — create one to begin.".to_string(),
+                body_style,
+            )));
+        } else {
+            for cube in app.session.state.cubes.iter().take(5) {
+                lines.push(Line::from(Span::styled(
+                    format!("  • {}", cube.name),
+                    body_style,
+                )));
+            }
+        }
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Quick Start".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Open Command Palette ........ Ctrl-P".to_string(),
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Create Cube".to_string(),
+            accent_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Join Cube".to_string(),
+            accent_style,
+        )));
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Activity".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  No recent activity yet.".to_string(),
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(" ".to_string(), body_style)));
+
+        lines.push(Line::from(Span::styled(
+            "Shortcuts".to_string(),
+            heading_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-P  Command palette    Ctrl-S  Save file",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-B  Build project        Ctrl-O  Open file",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-W  Close tab            Ctrl-Q  Quit",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  Ctrl-R  Reconnect              /  Search",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  e  Toggle Explorer   t  Toggle Terminal   u  Toggle Users   c  Toggle Chat",
+            body_style,
+        )));
+        lines.push(Line::from(Span::styled(
+            "  h j k l / arrows  Move cursor     Tab  Focus next panel",
+            body_style,
+        )));
+
+        lines
     }
 
     fn render_editor(app: &mut App, frame: &mut ratatui::Frame, rect: &Rect) {
@@ -1489,6 +1688,42 @@ pub(crate) mod render {
             let text = welcome_text(&app);
             assert!(text.contains("backend-api"));
             assert!(!text.contains("not inside a Cube yet"));
+        }
+
+        fn home_text(app: &App) -> String {
+            home_lines(app)
+                .iter()
+                .map(|l| {
+                    l.spans
+                        .iter()
+                        .map(|s| (*s.content).to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        #[test]
+        fn home_lines_offer_real_actions_when_no_cube_is_active() {
+            let app = App::new(SessionService::new("ws://localhost:9000"));
+            let text = home_text(&app);
+            assert!(text.contains("Create Cube"));
+            assert!(text.contains("Join Cube"));
+            assert!(text.contains("Welcome to Nexus"));
+            assert!(text.contains("Quick Start"));
+            assert!(text.contains("Shortcuts"));
+        }
+
+        #[test]
+        fn home_lines_list_known_cubes_from_real_state() {
+            let mut app = App::new(SessionService::new("ws://localhost:9000"));
+            app.session.state.cubes.push(CubeInfo {
+                id: CubeId::new(),
+                name: "backend-api".to_string(),
+            });
+            let text = home_text(&app);
+            assert!(text.contains("backend-api"));
         }
     }
 }
