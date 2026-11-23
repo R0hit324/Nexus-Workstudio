@@ -18,6 +18,7 @@ pub mod auth;
 pub mod build;
 pub mod collaboration;
 pub mod connection;
+pub mod diagnostics;
 pub mod events;
 pub mod health;
 pub mod lifecycle;
@@ -36,6 +37,8 @@ pub mod users;
 pub mod workspace;
 
 pub use collaboration::{CollabEphemeralEvent, CollaborationManager, CubeCollaborationState};
+pub use connection::ConnectionManager;
+pub use diagnostics::{collect, install_crash_handler, CrashReport, DiagnosticReport};
 pub use events::EventRouter;
 pub use health::{HealthComponent, HealthStatus};
 pub use lifecycle::{LifecycleHandle, ServerLifecycle};
