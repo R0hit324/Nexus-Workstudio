@@ -147,8 +147,12 @@ impl Server {
     /// Binds the listener and spawns the accept loop.
     ///
     /// # Errors
-    /// Returns an error if the listener cannot bind.
+    /// Returns an error if the configuration fails validation or the
+    /// listener cannot bind.
     pub async fn start(self) -> anyhow::Result<RunningServer> {
+        self.config
+            .validate()
+            .map_err(|err| anyhow::anyhow!("{err}"))?;
         let lifecycle = LifecycleHandle::new_booting();
         if !lifecycle.transition_to(ServerLifecycle::Initializing) {
             return Err(anyhow::anyhow!("server lifecycle failed to start"));

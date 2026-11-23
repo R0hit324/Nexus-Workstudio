@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorCode, Result};
 
 /// Environment variable pointing at an explicit config file.
 pub const ENV_CONFIG: &str = "NEXUS_CONFIG";
@@ -294,6 +294,86 @@ impl ClientConfig {
     }
 }
 
+/// Maps a single validation failure onto the unified Nexus error type with a
+/// field-qualified, human-readable message.
+fn config_error(field: &'static str, reason: impl Into<String>) -> Error {
+    let reason = reason.into();
+    Error::new(
+        ErrorCode::Internal,
+        format!("invalid configuration: {field}: {reason}"),
+    )
+}
+
+/// Requires a numeric setting to be greater than zero.
+fn require_positive(ok: bool, field: &'static str) -> Result<()> {
+    if ok {
+        Ok(())
+    } else {
+        Err(config_error(field, "must be greater than zero"))
+    }
+}
+
+impl ServerConfig {
+    /// Validates the configuration before the server starts serving.
+    ///
+    /// Port `0` is accepted on purpose: it asks the operating system for an
+    /// ephemeral port, which tests and local development rely on.
+    ///
+    /// # Errors
+    /// Returns the first invalid field together with a reason.
+    pub fn validate(&self) -> Result<()> {
+        if self.bind.trim().is_empty() {
+            return Err(config_error("bind", "must not be empty"));
+        }
+        if self.data_dir.trim().is_empty() {
+            return Err(config_error("data_dir", "must not be empty"));
+        }
+        require_positive(self.max_clients > 0, "max_clients")?;
+        require_positive(self.max_cubes > 0, "max_cubes")?;
+        require_positive(self.handshake_timeout_secs > 0, "handshake_timeout_secs")?;
+        require_positive(
+            self.authentication_timeout_secs > 0,
+            "authentication_timeout_secs",
+        )?;
+        require_positive(self.heartbeat_timeout_secs > 0, "heartbeat_timeout_secs")?;
+        require_positive(self.write_timeout_secs > 0, "write_timeout_secs")?;
+        require_positive(self.max_outbound_queue > 0, "max_outbound_queue")?;
+        require_positive(self.max_message_bytes > 0, "max_message_bytes")?;
+        Ok(())
+    }
+}
+
+impl ClientConfig {
+    /// Validates the client configuration before connecting.
+    ///
+    /// # Errors
+    /// Returns the first invalid field together with a reason.
+    pub fn validate(&self) -> Result<()> {
+        if self.server_address.trim().is_empty() {
+            return Err(config_error("server_address", "must not be empty"));
+        }
+        if self.server_port == 0 {
+            return Err(config_error("server_port", "must be a real port (1-65535)"));
+        }
+        if self.username.trim().is_empty() {
+            return Err(config_error("username", "must not be empty"));
+        }
+        require_positive(self.heartbeat_interval_secs > 0, "heartbeat_interval_secs")?;
+        require_positive(self.connect_timeout_secs > 0, "connect_timeout_secs")?;
+        Ok(())
+    }
+}
+
+impl NexusConfig {
+    /// Validates every section of the configuration.
+    ///
+    /// # Errors
+    /// Returns the first invalid field together with a reason.
+    pub fn validate(&self) -> Result<()> {
+        self.server.validate()
+    }
+}
+
 /// Candidate config-file locations for the whole system.
 #[must_use]
 pub fn config_file_candidates() -> Vec<PathBuf> {
@@ -383,5 +463,182 @@ mod tests {
         assert_eq!(cfg.server_address, "127.0.0.1");
         assert_eq!(cfg.server_port, DEFAULT_PORT);
         assert!(!cfg.username.is_empty());
+    }
+
+    #[test]
+    fn default_configurations_validate() {
+        NexusConfig::default().validate().unwrap();
+        ServerConfig::default().validate().unwrap();
+        ClientConfig::default().validate().unwrap();
+    }
+
+    #[test]
+    fn empty_bind_is_rejected() {
+        let cfg = ServerConfig {
+            bind: "   ".into(),
+            ..ServerConfig::default()
+        };
+        let err = cfg.validate().unwrap_err();
+        assert!(err.to_string().contains("bind"));
+        assert!(err.to_string().contains("must not be empty"));
+        assert!(err.to_string().starts_with("invalid configuration"));
+    }
+
+    #[test]
+    fn empty_data_dir_is_rejected() {
+        let cfg = ServerConfig {
+            data_dir: String::new(),
+            ..ServerConfig::default()
+        };
+        let err = cfg.validate().unwrap_err();
+        assert!(err.to_string().contains("data_dir"));
+    }
+
+    #[test]
+    fn zero_server_limits_are_rejected() {
+        let cases: [(&str, ServerConfig); 4] = [
+            (
+                "max_clients",
+                ServerConfig {
+                    max_clients: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "max_cubes",
+                ServerConfig {
+                    max_cubes: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "max_outbound_queue",
+                ServerConfig {
+                    max_outbound_queue: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "max_message_bytes",
+                ServerConfig {
+                    max_message_bytes: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+        ];
+        for (field, cfg) in cases {
+            let err = cfg.validate().unwrap_err();
+            assert!(
+                err.to_string().contains(field),
+                "expected field {field} in error, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_server_timeouts_are_rejected() {
+        let cases: [(&str, ServerConfig); 4] = [
+            (
+                "handshake_timeout_secs",
+                ServerConfig {
+                    handshake_timeout_secs: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "authentication_timeout_secs",
+                ServerConfig {
+                    authentication_timeout_secs: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "heartbeat_timeout_secs",
+                ServerConfig {
+                    heartbeat_timeout_secs: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+            (
+                "write_timeout_secs",
+                ServerConfig {
+                    write_timeout_secs: 0,
+                    ..ServerConfig::default()
+                },
+            ),
+        ];
+        for (field, cfg) in cases {
+            let err = cfg.validate().unwrap_err();
+            assert!(
+                err.to_string().contains(field),
+                "expected field {field} in error, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn ephemeral_port_is_allowed_for_the_server() {
+        let cfg = ServerConfig {
+            port: 0,
+            ..ServerConfig::default()
+        };
+        assert!(cfg.validate().is_ok(), "port 0 means ephemeral binding");
+    }
+
+    #[test]
+    fn invalid_client_settings_are_rejected() {
+        let cases: [(&str, ClientConfig); 3] = [
+            (
+                "server_address",
+                ClientConfig {
+                    server_address: String::new(),
+                    ..ClientConfig::default()
+                },
+            ),
+            (
+                "server_port",
+                ClientConfig {
+                    server_port: 0,
+                    ..ClientConfig::default()
+                },
+            ),
+            (
+                "username",
+                ClientConfig {
+                    username: "  ".into(),
+                    ..ClientConfig::default()
+                },
+            ),
+        ];
+        for (field, cfg) in cases {
+            let err = cfg.validate().unwrap_err();
+            assert!(
+                err.to_string().contains(field),
+                "expected field {field} in error, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_client_timeouts_are_rejected() {
+        let cfg = ClientConfig {
+            connect_timeout_secs: 0,
+            ..ClientConfig::default()
+        };
+        let err = cfg.validate().unwrap_err();
+        assert!(err.to_string().contains("connect_timeout_secs"));
+    }
+
+    #[test]
+    fn nexus_config_validation_delegates_to_server() {
+        let cfg = NexusConfig {
+            server: ServerConfig {
+                max_clients: 0,
+                ..ServerConfig::default()
+            },
+            ..NexusConfig::default()
+        };
+        let err = cfg.validate().unwrap_err();
+        assert!(err.to_string().contains("max_clients"));
     }
 }
