@@ -56,4 +56,4 @@ pub use terminal::{
     TerminalSize, TerminalState, TerminalVisibility,
 };
 pub use timestamp::Timestamp;
-pub use version::Version;
+pub use version::{MigrationRegistry, MigrationStep, Version};
