@@ -223,3 +223,105 @@ pub struct ValidationCheckpoint {
     pub checksum: String,
     pub validated_at: nexus_core::timestamp::Timestamp,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{PermissionsSnapshot, SnapshotState, WorkspaceSnapshot};
+    use nexus_core::cube::CubeDescriptor;
+    use nexus_core::event::EventSequence;
+    use nexus_core::ids::{CubeId, UserId, WorkspaceId};
+    use nexus_core::timestamp::Timestamp;
+    use nexus_core::version::Version;
+    use nexus_core::workspace::WorkspaceMetadata;
+    use sha2::{Digest, Sha256};
+
+    fn state() -> SnapshotState {
+        SnapshotState {
+            cube_metadata: CubeDescriptor::new(CubeId::new(), "cube", UserId::new()),
+            workspace_metadata: WorkspaceMetadata {
+                id: WorkspaceId::new(),
+                cube_id: CubeId::new(),
+                name: "workspace".to_string(),
+                version: Version::new(1),
+                file_count: 0,
+                directory_count: 0,
+                created_at: Timestamp::now(),
+                updated_at: Timestamp::now(),
+            },
+            directories: Vec::new(),
+            file_metadata: Vec::new(),
+            file_contents: Vec::new(),
+            permissions: PermissionsSnapshot { rules: Vec::new() },
+            members: Vec::new(),
+        }
+    }
+
+    fn snapshot(event_sequence: u64) -> WorkspaceSnapshot {
+        let mut snapshot = WorkspaceSnapshot::new_full(
+            CubeId::new(),
+            EventSequence::new(event_sequence),
+            Version::new(1),
+            state(),
+        );
+        snapshot.checksum = "0".repeat(64);
+        snapshot
+    }
+
+    #[test]
+    fn full_snapshot_with_missing_checksum_is_rejected() {
+        let validator = SnapshotValidator::new();
+        let snapshot = WorkspaceSnapshot::new_full(
+            CubeId::new(),
+            EventSequence::new(1),
+            Version::new(1),
+            state(),
+        );
+        assert!(
+            matches!(
+                validator.validate(&snapshot),
+                Err(ValidationError::MissingChecksum)
+            ),
+            "a full snapshot without a checksum must be rejected"
+        );
+    }
+
+    #[test]
+    fn full_snapshot_with_empty_state_is_rejected() {
+        let validator = SnapshotValidator::new();
+        let snapshot = snapshot(2);
+        assert!(
+            matches!(
+                validator.validate(&snapshot),
+                Err(ValidationError::EmptyState)
+            ),
+            "a full snapshot with an empty state must be rejected"
+        );
+    }
+
+    #[test]
+    fn checksum_mismatch_is_detected_for_tampered_payload() {
+        let validator = SnapshotValidator::new();
+        let mut snapshot = snapshot(3);
+        // A checksum that does not match the payload must fail verification.
+        assert!(!validator.verify_checksum(&snapshot, b"payload").unwrap());
+        // A checksum computed over the same payload verifies cleanly.
+        let mut hasher = Sha256::new();
+        hasher.update(b"payload");
+        let computed = format!("{:x}", hasher.finalize());
+        snapshot.checksum = computed;
+        assert!(validator.verify_checksum(&snapshot, b"payload").unwrap());
+    }
+
+    #[test]
+    fn unsupported_schema_version_is_rejected() {
+        let validator = SnapshotValidator::new().with_allowed_versions(vec![1]);
+        let snapshot = snapshot(4);
+        let error = validator.validate(&snapshot);
+        assert!(
+            error.is_err(),
+            "snapshot with schema version {} must be validated",
+            snapshot.schema_version
+        );
+    }
+}
