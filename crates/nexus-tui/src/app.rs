@@ -1000,7 +1000,7 @@ pub(crate) mod render {
         render_header(app, frame, &map.header);
 
         if let Some(rect) = map.explorer {
-            let lines: Vec<String> = app
+            let mut lines: Vec<String> = app
                 .explorer
                 .entries
                 .iter()
@@ -1009,6 +1009,9 @@ pub(crate) mod render {
                     format!("{icon}{}", e.name())
                 })
                 .collect();
+            if lines.is_empty() {
+                lines.push("No files yet.".to_string());
+            }
             frame.render_widget(
                 Paragraph::new(lines.join("\n")).block(panel_block(app, "Explorer")),
                 border_rect(&rect),
