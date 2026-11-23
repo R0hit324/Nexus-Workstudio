@@ -1,7 +1,7 @@
 # Contributing
 
-Full contributing guidelines live at the repository root in `CONTRIBUTING.md`.
-Key points:
+Full contributing guidelines live in `CONTRIBUTING.md` at the project root
+(the `Nexus/` folder). Key points:
 
 1. Implement parts sequentially; verify each against the spec's issue list.
 2. Follow the verification pipeline in `CONTRIBUTING.md` (note: on this machine

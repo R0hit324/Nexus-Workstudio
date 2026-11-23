@@ -15,6 +15,9 @@
 
 $ErrorActionPreference = 'Stop'
 
+# Run from the project root regardless of the caller's working directory.
+Set-Location (Join-Path $PSScriptRoot '..')
+
 # NOTE: As of 2026-09-11, Application Control on this machine blocks execution
 # of unsigned binaries compiled into the workspace target dir (os error 4551).
 # This includes dependency build scripts, so `cargo check`/`cargo test`/`cargo

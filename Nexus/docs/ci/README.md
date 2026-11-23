@@ -7,6 +7,10 @@ activate CI, copy `ci.yml` to `.github/workflows/ci.yml` and push with a
 credential that has the `workflow` scope (classic PAT) or the
 **Workflows: Read and write** repository permission (fine-grained PAT).
 
+All project files live in the `Nexus/` folder at the repository root, so the
+workflow sets `defaults.run.working-directory: Nexus`. Keep that block when
+copying the file, or every cargo step will run from the wrong directory.
+
 The pipeline stages follow the Part 14 specification:
 
 1. Formatting (rustfmt)

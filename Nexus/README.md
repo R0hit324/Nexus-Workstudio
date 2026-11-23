@@ -21,6 +21,9 @@ files. This repository implements them part by part.
 
 ## Repository layout
 
+All project files live in the `Nexus/` folder at the repository root; the
+paths below are relative to it.
+
 ```text
 crates/
   nexus-core        foundational types: config, logging, error ladder, ids, events
