@@ -52,6 +52,7 @@ Part 14 is complete when:
 - [x] Security tests cover authn/authz boundaries and abuse cases.
 - [ ] Stress tests cover multi-user concurrency and slow-client behavior.
 - [x] Release checklist is documented and followed.
+- [x] Terminal stress tests exist for large ANSI input streams.
 
 ## Delivered Part 14 layers
 
@@ -71,6 +72,8 @@ The following layers are implemented and verified in the current branch:
 - Performance regression detection (`nexus-core::bench`, `tests/performance`).
 - Network fault simulation: abrupt client disconnects are cleaned up without
       corrupting server state (`tests/integration`).
+- Terminal stress: 100k-byte ANSI input streams never panic
+      (`crates/nexus-terminal/src/parser.rs`).
 - CI pipeline definition (`docs/ci`, activation pending PAT scope).
 - Release testing checklist, compatibility rules, and failure artifacts
       (`docs/architecture/release.md`).
