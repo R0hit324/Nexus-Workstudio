@@ -13,11 +13,13 @@ and every new capability lands with tests that prove it.
 | Integration | Cross-crate behavior through public APIs (server, client, protocol, events) | `tests/integration` | Active |
 | End-to-end | Real server + real client over the wire on an ephemeral port | `tests/integration`, `tests/performance` | Active |
 | Performance regression | Benchmark runs compared against baselines (`nexus-core::bench::is_regressed`) | `tests/performance`, `crates/nexus-core/src/bench.rs` | Active |
-| Chaos | Failure injection and recovery behavior (crashes, drops, restarts) | `tests/support` (FaultInjector), `tests/regression`, `tests/security` | Active |
+| Chaos | Failure injection and recovery behavior (crashes, drops, restarts) | `tests/support` (FaultInjector), `tests/regression`, `tests/security`, `tests/integration` | Active |
 | Security | Authentication/authorization boundaries, protocol abuse resistance | `tests/security` | Active |
+| Fuzzing | Deterministic fuzz harnesses over frames/messages | `tests/fuzz` | Active |
+| Property-based | CRDT convergence and versioning properties | `tests/property` | Active |
+| Snapshot integrity | Checksum, state, and schema validation of snapshots | `crates/nexus-snapshot/src/validation.rs` | Active |
 | Stress | High load, many users, many cubes, slow clients | planned | Pending |
 | Release | Pre-release checklist (versioning, docs, migration, sign-off) | `docs/architecture/release.md` | Active |
-| Fuzzing | Deterministic fuzz harnesses over frames/messages | planned | Pending |
 
 ## Quality gates
 
@@ -40,20 +42,16 @@ regression budgets.
 
 Part 14 is complete when:
 
-- [ ] Unit test coverage exists for all state machines and pure logic shipped
+- [x] Unit test coverage exists for all state machines and pure logic shipped
       so far.
-- [ ] Integration tests cover the operational surface (handshake, auth,
+- [x] Integration tests cover the operational surface (handshake, auth,
       cubes, membership, presence, heartbeats, plugins, errors).
-- [ ] End-to-end tests run a real server and real client over TCP.
-- [ ] Performance regressions fail the suite via benchmark baselines.
-- [ ] Chaos tests cover restart persistence and failure recovery.
-- [ ] Security tests cover authn/authz boundaries and abuse cases.
-- [ ] Stress tests cover multi-user concurrency and slow-client behavior.
+- [x] End-to-end tests run a real server and real client over TCP.
+- [x] Performance regressions fail the suite via benchmark baselines.
+- [x] Chaos tests cover restart persistence and failure recovery.
 - [x] Security tests cover authn/authz boundaries and abuse cases.
-- [ ] Release checklist is documented and followed.
-- [x] Security boundary and malicious-client suites are in place
-      (`tests/security`); critical boundaries and handshake ordering are
-      covered.
+- [ ] Stress tests cover multi-user concurrency and slow-client behavior.
+- [x] Release checklist is documented and followed.
 
 ## Delivered Part 14 layers
 
@@ -64,11 +62,27 @@ The following layers are implemented and verified in the current branch:
       (`tests/support`).
 - Failure injection (`tests/support`: `FaultInjector`, `FaultyEventStore`).
 - Permanent regression suite with stable IDs (`tests/regression`).
-- Security boundary suite (`tests/security`).
-- Property-based synchronization tests (`tests/property`).
+- Security boundary suite incl. malicious-client protocol abuse
+      (`tests/security`).
+- Property-based synchronization convergence tests (`tests/property`).
+- Deterministic fuzz harnesses for frames and messages (`tests/fuzz`).
+- Snapshot integrity, corruption, and validation tests
+      (`crates/nexus-snapshot/src/validation.rs`).
 - Performance regression detection (`nexus-core::bench`, `tests/performance`).
+- Network fault simulation: abrupt client disconnects are cleaned up without
+      corrupting server state (`tests/integration`).
 - CI pipeline definition (`docs/ci`, activation pending PAT scope).
-- Release testing checklist and compatibility rules (`docs/architecture/release.md`).
+- Release testing checklist, compatibility rules, and failure artifacts
+      (`docs/architecture/release.md`).
+
+## Failure artifacts and QA reporting
+
+When a QA gate fails, the reproduction artifacts are the ones listed in
+`docs/architecture/release.md` (logs, network traces, event history, snapshot,
+workspace state, crash information, build output, terminal output, AI tool
+history where safe). QA runs record the failing gate, suite, commit, and
+environment; confirmed defects enter the permanent regression suite through
+their stable regression IDs.
 
 ## Relationship to performance (Part 13)
 

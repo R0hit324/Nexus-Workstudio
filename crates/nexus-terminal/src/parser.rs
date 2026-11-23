@@ -415,4 +415,29 @@ mod tests {
         let _events = parser.parse(b'2');
         parser.parse(b'J');
     }
+
+    #[test]
+    fn stress_large_input_stream_never_panics() {
+        let mut parser = AnsiParser::new();
+        // Deterministic pseudo-random byte stream mixing escapes, CSI/OSC
+        // sequences, control bytes, and printables; must never panic and must
+        // always settle back into a known state.
+        let mut state: u64 = 0x1234_5678_9ABC_DEF0;
+        let mut next = || {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (state >> 33) as u8
+        };
+        for _ in 0..100_000 {
+            let byte = next();
+            let _events = parser.parse(byte);
+        }
+        // A complete escape sequence returns the parser to ground state.
+        parser.parse(0x1B);
+        parser.parse(b'[');
+        let _final = parser.parse(b'2');
+        let _final = parser.parse(b'J');
+        assert_eq!(parser.state, ParserState::Ground);
+    }
 }
