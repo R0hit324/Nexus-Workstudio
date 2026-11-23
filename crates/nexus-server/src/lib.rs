@@ -19,6 +19,7 @@ pub mod build;
 pub mod collaboration;
 pub mod connection;
 pub mod events;
+pub mod health;
 pub mod lifecycle;
 pub mod manager;
 pub mod metrics;
@@ -35,6 +36,8 @@ pub mod users;
 pub mod workspace;
 
 pub use collaboration::{CollabEphemeralEvent, CollaborationManager, CubeCollaborationState};
+pub use events::EventRouter;
+pub use health::{HealthComponent, HealthStatus};
 pub use lifecycle::{LifecycleHandle, ServerLifecycle};
 pub use manager::InMemoryCubeManager;
 pub use metrics::Metrics;
