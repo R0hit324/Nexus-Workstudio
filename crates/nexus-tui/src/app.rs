@@ -1169,13 +1169,24 @@ pub(crate) mod render {
             ConnectionState::Connecting => "CONNECTING".to_string(),
             ConnectionState::Disconnected => "OFFLINE".to_string(),
         };
-        let line = Line::from(vec![
+        let mut spans = vec![
             Span::styled("Nexus".to_string(), brand_style),
             Span::styled(
                 format!("  ·  {}  ·  {}", app.session.state.user_label(), connection),
                 body_style,
             ),
-        ]);
+        ];
+        if let Some(cube) = app.session.state.active_cube.as_ref() {
+            spans.push(Span::styled(
+                format!("  ·  Cube: {}", cube.name),
+                body_style,
+            ));
+        }
+        spans.push(Span::styled(
+            "  ·  Ctrl-P Commands   /  Search   Ctrl-Q Quit".to_string(),
+            body_style,
+        ));
+        let line = Line::from(spans);
         frame.render_widget(Paragraph::new(vec![line]), border_rect(rect));
     }
 
@@ -1363,10 +1374,52 @@ pub(crate) mod render {
 
         let text_area = TRect::new(inner.x, inner.y, inner.width, inner.height);
         if app.editor.active_doc().is_none() {
-            render_welcome(app, frame, text_area);
+            if app.session.state.active_cube.is_none() {
+                render_welcome(app, frame, text_area);
+            } else {
+                render_editor_empty(app, frame, text_area);
+            }
         } else {
             render_editor_lines(app, frame, text_area);
         }
+    }
+
+    /// Renders the calm empty state used when a Cube is active but no file is open.
+    fn render_editor_empty(app: &App, frame: &mut ratatui::Frame, area: TRect) {
+        let cube_name = app
+            .session
+            .state
+            .active_cube
+            .as_ref()
+            .map(|c| c.name.clone())
+            .unwrap_or_else(|| "Editor".into());
+        let lines = editor_empty_lines(app, &cube_name);
+        frame.render_widget(Paragraph::new(lines), area);
+    }
+
+    /// Builds the editor empty state for an active Cube without an open file.
+    fn editor_empty_lines(app: &App, cube_name: &str) -> Vec<Line<'static>> {
+        use ratatui::style::Modifier;
+
+        let body_style = to_terminal_style(app.theme.style(StyleKey::Foreground));
+        let muted_style = to_terminal_style(app.theme.style(StyleKey::Dimmed));
+
+        let lines: Vec<Line<'static>> = vec![
+            Line::from(Span::styled(
+                format!("No file open in {cube_name}"),
+                to_terminal_style(app.theme.style(StyleKey::PanelTitle)),
+            )),
+            Line::from(Span::styled(
+                "Open a file from the Explorer or the Command Palette to start editing."
+                    .to_string(),
+                body_style,
+            )),
+            Line::from(Span::styled(
+                "The editor will appear here once a file is open.".to_string(),
+                muted_style,
+            )),
+        ];
+        lines
     }
 
     /// Renders the first-launch welcome content when no document is open.
