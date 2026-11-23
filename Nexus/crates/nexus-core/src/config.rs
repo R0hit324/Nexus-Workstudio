@@ -20,6 +20,10 @@ pub const ENV_LOG_LEVEL: &str = "NEXUS_LOG_LEVEL";
 pub const ENV_SERVER_ADDRESS: &str = "NEXUS_SERVER_ADDRESS";
 /// Environment variable overriding the client's username.
 pub const ENV_USERNAME: &str = "NEXUS_USERNAME";
+/// Environment variable overriding the maximum log file size before rotation.
+pub const ENV_LOG_MAX_BYTES: &str = "NEXUS_LOG_MAX_BYTES";
+/// Environment variable overriding the retained rotated log files count.
+pub const ENV_LOG_MAX_FILES: &str = "NEXUS_LOG_MAX_FILES";
 
 /// Default server port.
 pub const DEFAULT_PORT: u16 = 7000;
@@ -100,6 +104,12 @@ impl Default for LogFormat {
 pub struct LoggingConfig {
     pub level: LogLevel,
     pub format: LogFormat,
+    /// Maximum log file size in bytes before rotation kicks in. `0` disables
+    /// file rotation (logs go to stdout/stderr).
+    pub max_bytes: u64,
+    /// Maximum number of rotated log files to retain. `0` disables retention
+    /// bookkeeping (the rolling appender keeps its own default window).
+    pub max_files: u32,
 }
 
 impl Default for LoggingConfig {
@@ -107,6 +117,8 @@ impl Default for LoggingConfig {
         Self {
             level: LogLevel::Info,
             format: LogFormat::Text,
+            max_bytes: 0,
+            max_files: 0,
         }
     }
 }
@@ -264,6 +276,16 @@ impl NexusConfig {
         if let Ok(v) = std::env::var(ENV_LOG_LEVEL) {
             if let Ok(level) = LogLevel::from_str(&v) {
                 self.logging.level = level;
+            }
+        }
+        if let Ok(v) = std::env::var(ENV_LOG_MAX_BYTES) {
+            if let Ok(max_bytes) = v.parse::<u64>() {
+                self.logging.max_bytes = max_bytes;
+            }
+        }
+        if let Ok(v) = std::env::var(ENV_LOG_MAX_FILES) {
+            if let Ok(max_files) = v.parse::<u32>() {
+                self.logging.max_files = max_files;
             }
         }
         self
