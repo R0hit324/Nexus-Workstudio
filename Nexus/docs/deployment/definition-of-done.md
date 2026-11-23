@@ -9,7 +9,7 @@ Nexus roadmap (spec sections 97-99, 98 critical deployment rules).
 |----------|--------|----------|
 | Server packaging exists | Delivered | `docs/deployment/deployment.md` |
 | Client packaging exists | Delivered | `docs/deployment/deployment.md` |
-| Linux deployment works | Documented target | `docs/deployment/deployment.md` |
+| Linux deployment works | Delivered | `docs/deployment/linux.md` (systemd, firewall) |
 | Installation documented | Delivered | `docs/deployment/deployment.md` |
 | Configuration system exists | Delivered | `nexus-core::config`, `NexusConfig::validate`, `Server::start` fail-fast |
 | CLI exists | Delivered | `nexus-server`/`nexus-client` argument surface (create/list/health surfaces in docs) |
@@ -18,7 +18,7 @@ Nexus roadmap (spec sections 97-99, 98 critical deployment rules).
 | Health checks exist | Delivered | `nexus-server::health` |
 | Readiness/liveness defined | Delivered | `nexus-server::health` + `docs/deployment/deployment.md` |
 | Structured logging exists | Delivered | `nexus-core::logging` (text/json), `LoggingConfig` |
-| Log rotation exists | Pending | Config surface ready; file appender tracked with operations |
+| Log rotation exists | Delivered | `nexus-core::logging` rotating file writer + policy |
 | Metrics exist | Delivered | `nexus-core::metrics`, `nexus-server::metrics`, performance/QA suites |
 | Monitoring documentation exists | Delivered | `docs/deployment/operations.md` |
 | LAN security is implemented | Delivered | Security suites + `docs/deployment/policies.md` |
