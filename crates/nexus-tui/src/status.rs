@@ -16,6 +16,10 @@ pub struct UiSnapshot {
     pub line: Option<u64>,
     pub column: Option<u64>,
     pub mode: String,
+    /// Focused panel name, when focus is known.
+    pub focus: Option<String>,
+    /// Number of users in the current cube, when known.
+    pub members: Option<usize>,
     /// Optional summary, e.g. "3 notifications" or a build state.
     pub summary: Option<String>,
 }
@@ -47,6 +51,12 @@ impl UiSnapshot {
             _ => {}
         }
         segments.push(self.mode.clone());
+        if let Some(focus) = &self.focus {
+            segments.push(format!("focus: {focus}"));
+        }
+        if let Some(members) = self.members {
+            segments.push(format!("members: {members}"));
+        }
         if let Some(summary) = &self.summary {
             segments.push(summary.clone());
         }
@@ -81,6 +91,8 @@ mod tests {
             line: Some(42),
             column: Some(18),
             mode: "NORMAL".into(),
+            focus: Some("editor".into()),
+            members: Some(3),
             summary: None,
         }
     }

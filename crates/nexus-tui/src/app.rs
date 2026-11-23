@@ -861,6 +861,8 @@ impl App {
         s.user = self.session.state.user_label();
         s.permission = None;
         s.mode = self.mode.name().to_ascii_uppercase();
+        s.focus = self.layout.focus.map(|id| id.name().to_string());
+        s.members = Some(self.users.len());
         s.summary = if self.build.running {
             Some("building…".into())
         } else if !self.chat.lines.is_empty() {
